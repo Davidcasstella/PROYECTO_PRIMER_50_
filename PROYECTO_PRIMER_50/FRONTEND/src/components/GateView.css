@@ -1,0 +1,203 @@
+/* Gate View Styles - Enhanced with parking visualizations */
+.gate-view {
+  padding: var(--space-lg);
+  animation: fadeInUp 0.6s ease;
+}
+
+.gate-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.gate-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.semaphore-info {
+  font-size: 0.8rem;
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+}
+
+.sem-values {
+  font-weight: 700;
+}
+
+.sem-waiting {
+  color: var(--accent-yellow);
+}
+
+.gate-counter {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+.counter-ok {
+  color: var(--accent-green);
+}
+
+.counter-full {
+  color: var(--accent-red);
+  animation: pulse-red 1.5s ease-in-out infinite;
+}
+
+.gate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.gate-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  text-align: center;
+  transition: all var(--transition-normal);
+  position: relative;
+}
+
+.gate-occupied {
+  border-color: rgba(255, 71, 87, 0.25);
+  background: rgba(255, 71, 87, 0.04);
+}
+
+.gate-available {
+  border-color: rgba(0, 255, 136, 0.15);
+}
+
+.gate-available:hover {
+  border-color: rgba(0, 255, 136, 0.3);
+  background: rgba(0, 255, 136, 0.04);
+}
+
+.gate-card-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.gate-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+/* Gate parking spot */
+.gate-parking {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-sm);
+  position: relative;
+}
+
+.gate-parking::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 2px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 1px;
+}
+
+.gate-parked-plane {
+  animation: fadeIn 0.5s ease;
+}
+
+.gate-plane-icon {
+  filter: drop-shadow(0 0 6px rgba(255, 165, 2, 0.4));
+  animation: planeIdle 3s ease-in-out infinite;
+}
+
+@keyframes planeIdle {
+  0%, 100% { transform: rotate(-90deg) translateX(0); }
+  50% { transform: rotate(-90deg) translateX(-3px); }
+}
+
+.gate-parking-empty {
+  opacity: 0.5;
+}
+
+.gate-plane-info {
+  margin-bottom: var(--space-sm);
+}
+
+.gate-plane-flight {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--accent-yellow);
+}
+
+.gate-plane-airline {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.gate-empty {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.gate-assignments {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-xs);
+}
+
+/* Semaphore utilization bar */
+.semaphore-bar-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.semaphore-bar-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.semaphore-bar-track {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.semaphore-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-green), var(--accent-yellow), var(--accent-red));
+  border-radius: var(--radius-full);
+  transition: width var(--transition-slow);
+}
+
+.semaphore-bar-percent {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 36px;
+  text-align: right;
+}

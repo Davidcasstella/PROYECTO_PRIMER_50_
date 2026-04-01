@@ -1,0 +1,156 @@
+/* Logs Panel Styles */
+.logs-panel {
+  padding: var(--space-lg);
+  animation: fadeInUp 0.8s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.logs-header h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* Floating "new logs" button */
+.scroll-bottom-btn {
+  position: absolute;
+  bottom: var(--space-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: var(--accent-cyan);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 212, 255, 0.35);
+  animation: fadeInUp 0.25s ease;
+  transition: all var(--transition-fast);
+}
+
+.scroll-bottom-btn:hover {
+  background: #33e0ff;
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.5);
+  transform: translateX(-50%) scale(1.05);
+}
+
+.logs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.logs-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.logs-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.logs-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.logs-container {
+  flex: 1;
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.8;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm);
+}
+
+.logs-empty {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+}
+
+.log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: 3px var(--space-sm);
+  border-radius: 3px;
+  transition: background var(--transition-fast);
+  animation: fadeIn 0.2s ease;
+}
+
+.log-entry:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.log-time {
+  color: var(--text-muted);
+  min-width: 72px;
+  flex-shrink: 0;
+}
+
+.log-level {
+  min-width: 44px;
+  font-weight: 600;
+  flex-shrink: 0;
+  text-align: center;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+}
+
+.log-level-info {
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.log-level-warn {
+  color: var(--accent-yellow);
+  background: rgba(255, 165, 2, 0.08);
+}
+
+.log-level-error {
+  color: var(--accent-red);
+  background: rgba(255, 71, 87, 0.08);
+}
+
+.log-level-debug {
+  color: var(--text-muted);
+}
+
+.log-message {
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+
+.log-info .log-message {
+  color: var(--text-secondary);
+}
+
+.log-warn .log-message {
+  color: var(--accent-yellow);
+}
+
+.log-error .log-message {
+  color: var(--accent-red);
+}

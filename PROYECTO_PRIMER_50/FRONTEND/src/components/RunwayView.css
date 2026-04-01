@@ -1,0 +1,266 @@
+/* Runway View Styles - Enhanced with airplane animations */
+.runway-view {
+  padding: var(--space-lg);
+  animation: fadeInUp 0.5s ease;
+}
+
+.runway-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.runway-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.runway-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-md);
+}
+
+.runway-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+.runway-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  transition: all var(--transition-normal);
+}
+
+.runway-busy::before {
+  background: linear-gradient(90deg, var(--accent-red), var(--accent-yellow));
+  box-shadow: 0 0 12px var(--accent-red-glow);
+}
+
+.runway-free::before {
+  background: linear-gradient(90deg, var(--accent-green), var(--accent-cyan));
+  box-shadow: 0 0 12px var(--accent-green-glow);
+}
+
+.runway-busy {
+  border-color: rgba(255, 71, 87, 0.2);
+}
+
+.runway-free {
+  border-color: rgba(0, 255, 136, 0.15);
+}
+
+.runway-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.runway-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ========================================
+   ANIMATED RUNWAY STRIP
+   ======================================== */
+.runway-strip {
+  background: linear-gradient(180deg, #1a1f2e 0%, #12162280 100%);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: var(--radius-sm);
+  height: 80px;
+  margin-bottom: var(--space-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.runway-markings {
+  display: flex;
+  gap: 14px;
+  position: absolute;
+  width: 100%;
+  justify-content: center;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.runway-mark {
+  width: 18px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+}
+
+/* Runway edge lights */
+.runway-lights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px;
+  pointer-events: none;
+}
+
+.runway-light {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: pulse 2s ease infinite;
+}
+
+.light-green {
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green-glow);
+}
+
+.light-red {
+  background: var(--accent-red);
+  box-shadow: 0 0 8px var(--accent-red-glow);
+  animation: pulse-red 1.2s ease infinite;
+}
+
+/* ========================================
+   ANIMATED AIRPLANE ON RUNWAY
+   ======================================== */
+.runway-plane-anim {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 5;
+}
+
+.runway-plane-svg {
+  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.5));
+}
+
+.plane-shadow {
+  width: 30px;
+  height: 6px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  margin-top: 2px;
+}
+
+/* Landing animation: plane comes from left and stops in center */
+.anim-landing {
+  animation: planeLand 2s ease-out forwards;
+}
+
+@keyframes planeLand {
+  0% {
+    left: -50px;
+    opacity: 0;
+    transform: translateY(-60%) scale(0.6);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-55%) scale(0.8);
+  }
+  100% {
+    left: calc(50% - 20px);
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+/* Takeoff animation: plane accelerates and exits right */
+.anim-takeoff {
+  animation: planeTakeoff 2s ease-in forwards;
+}
+
+@keyframes planeTakeoff {
+  0% {
+    left: calc(50% - 20px);
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  100% {
+    left: calc(100% + 50px);
+    opacity: 0;
+    transform: translateY(-70%) scale(0.7);
+  }
+}
+
+/* Idle on runway */
+.anim-idle {
+  left: calc(50% - 20px);
+  animation: planeIdle 3s ease-in-out infinite;
+}
+
+@keyframes planeIdle {
+  0%, 100% { transform: translateY(-50%); }
+  50% { transform: translateY(-53%); }
+}
+
+/* Empty runway ghost plane */
+.runway-idle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.3;
+}
+
+/* ========================================
+   RUNWAY INFO & STATS
+   ======================================== */
+.runway-info {
+  text-align: center;
+  margin-bottom: var(--space-sm);
+}
+
+.runway-plane-id {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.empty-dash {
+  color: var(--text-muted);
+}
+
+.runway-plane-airline {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.runway-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-sm);
+}

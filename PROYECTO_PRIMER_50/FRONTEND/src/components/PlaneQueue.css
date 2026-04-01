@@ -1,0 +1,139 @@
+/* Plane Queue Styles - Enhanced */
+.plane-queue {
+  padding: var(--space-lg);
+  animation: fadeInUp 0.7s ease;
+}
+
+.queue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.queue-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.queue-count {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.queue-section {
+  margin-bottom: var(--space-lg);
+}
+
+.queue-section:last-child {
+  margin-bottom: 0;
+}
+
+.queue-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.queue-empty {
+  text-align: center;
+  padding: var(--space-lg);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  animation: slideInLeft 0.3s ease both;
+  transition: all var(--transition-fast);
+}
+
+.queue-item:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-color-active);
+}
+
+.queue-item-waiting {
+  border-left: 3px solid var(--accent-yellow);
+}
+
+.queue-item-active {
+  border-left: 3px solid var(--accent-cyan);
+}
+
+.qi-position {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--accent-yellow);
+  min-width: 28px;
+}
+
+.qi-icon-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.qi-plane-spinning {
+  animation: spinSlow 4s linear infinite;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.qi-status-icon {
+  min-width: 28px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qi-info {
+  flex: 1;
+}
+
+.qi-flight {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.qi-airline {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.badge-warning {
+  background: rgba(255, 165, 2, 0.12);
+  color: var(--accent-yellow);
+  border: 1px solid rgba(255, 165, 2, 0.2);
+}

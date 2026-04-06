@@ -128,8 +128,10 @@
 }
 
 @keyframes planeIdle {
-  0%, 100% { transform: rotate(-90deg) translateX(0); }
-  50% { transform: rotate(-90deg) translateX(-3px); }
+  /* rotate(90deg) = plane faces RIGHT (SVG default points UP).
+     Must be included here because CSS keyframes override inline style transform. */
+  0%, 100% { transform: rotate(90deg) translateX(0); }
+  50% { transform: rotate(90deg) translateX(-3px); }
 }
 
 .gate-parking-empty {

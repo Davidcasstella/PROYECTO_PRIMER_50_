@@ -8,30 +8,30 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-lg) 0;
-  margin-bottom: var(--space-md);
+  padding: var(--space-sm) 0;
+  margin-bottom: var(--space-xs);
   flex-wrap: wrap;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .header-title {
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .title-plane-icon {
-  filter: drop-shadow(0 0 10px var(--accent-cyan-glow));
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
   animation: float 3s ease-in-out infinite;
 }
 
 .header-subtitle {
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .connection-status {
@@ -47,23 +47,23 @@
 }
 
 .conn-ok {
-  color: var(--accent-green);
-  border-color: rgba(0, 255, 136, 0.2);
+  color: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.25);
 }
 
 .conn-err {
-  color: var(--accent-red);
-  border-color: rgba(255, 71, 87, 0.2);
+  color: #c62828;
+  border-color: rgba(198, 40, 40, 0.25);
 }
 
 /* Controls */
 .dashboard-controls {
   display: flex;
   align-items: center;
-  padding: var(--space-md) var(--space-lg);
-  margin-bottom: var(--space-lg);
+  padding: var(--space-xs) var(--space-md);
+  margin-bottom: var(--space-xs);
   flex-wrap: wrap;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .controls-group {
@@ -98,13 +98,13 @@
 /* Statistics */
 .dashboard-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--space-md);
-  margin-bottom: var(--space-lg);
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xs);
 }
 
 .stat-card {
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-xs) var(--space-sm);
   text-align: center;
   animation: fadeInUp 0.4s ease both;
   position: relative;
@@ -121,12 +121,12 @@
 }
 
 .stat-value {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 800;
   font-family: var(--font-mono);
   color: var(--accent-cyan);
   line-height: 1;
-  margin-bottom: var(--space-xs);
+  margin-bottom: 2px;
 }
 
 .stat-warn {
@@ -142,7 +142,7 @@
 }
 
 .stat-label {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   font-weight: 500;
 }

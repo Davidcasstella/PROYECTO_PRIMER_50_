@@ -56,11 +56,11 @@ export default function GateView() {
             <div className="gate-parking">
               {gate.occupied && gate.assignedPlane ? (
                 <div className="gate-parked-plane">
-                  <PlaneIcon size={32} color="var(--accent-yellow)" direction="up" className="gate-plane-icon" />
+                  <PlaneIcon size={32} color="var(--accent-yellow)" direction="right" className="gate-plane-icon" />
                 </div>
               ) : (
                 <div className="gate-parking-empty">
-                  <PlaneIcon size={24} color="rgba(255,255,255,0.06)" direction="up" />
+                  <PlaneIcon size={24} color="rgba(255,255,255,0.06)" direction="right" />
                 </div>
               )}
             </div>

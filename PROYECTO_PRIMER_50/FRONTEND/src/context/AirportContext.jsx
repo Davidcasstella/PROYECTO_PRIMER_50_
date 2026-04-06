@@ -35,6 +35,9 @@ export function AirportProvider({ children }) {
   // Loading states
   const [loading, setLoading] = useState(false);
 
+  // Demo overlay data (null = hidden, object = show overlay)
+  const [demoData, setDemoData] = useState(null);
+
   // Ref to avoid stale closures in socket handlers
   const logsRef = useRef(logs);
   logsRef.current = logs;
@@ -82,14 +85,14 @@ export function AirportProvider({ children }) {
     const onPlaneLanding = (data) => {
       addLog('INFO', `[LANDING] ${data.plane.flightNumber} LANDING on ${data.runway.name}`);
     };
-    const onPlaneLanded = (data) => {
-      addLog('INFO', `[LANDED] ${data.plane.flightNumber} LANDED`);
+    const onPlaneTaxiingToGate = (data) => {
+      addLog('INFO', `[TAXI→GATE] ${data.plane.flightNumber} taxiing to ${data.gate.name}`);
     };
     const onPlaneGateAssigned = (data) => {
-      addLog('INFO', `[GATE] ${data.plane.flightNumber} -> ${data.gate.name}`);
+      addLog('INFO', `[AT GATE] ${data.plane.flightNumber} → ${data.gate.name}`);
     };
-    const onPlaneDeparting = (data) => {
-      addLog('INFO', `[DEPART] ${data.plane?.flightNumber || 'Plane'} DEPARTING`);
+    const onPlaneTaxiingToRunway = (data) => {
+      addLog('INFO', `[TAXI→RUNWAY] ${data.plane.flightNumber} leaving gate`);
     };
     const onPlaneDeparted = (data) => {
       addLog('INFO', `[DEPARTED] ${data.plane.flightNumber} DEPARTED`);
@@ -105,9 +108,11 @@ export function AirportProvider({ children }) {
     };
     const onRaceCondition = (data) => {
       addLog('ERROR', `RACE CONDITION: ${data.winner} won, ${data.loser} lost!`);
+      setDemoData({ type: 'race_condition', ...data });
     };
     const onDeadlockDetected = (data) => {
       addLog('ERROR', `DEADLOCK DETECTED: Circular wait between planes`);
+      setDemoData({ type: 'deadlock', ...data });
     };
     const onDeadlockResolved = (data) => {
       addLog('INFO', `DEADLOCK RESOLVED via Global Resource Ordering`);
@@ -125,9 +130,9 @@ export function AirportProvider({ children }) {
     socket.on('status:update', onStatusUpdate);
     socket.on('plane:queued', onPlaneQueued);
     socket.on('plane:landing', onPlaneLanding);
-    socket.on('plane:landed', onPlaneLanded);
+    socket.on('plane:taxiing_to_gate', onPlaneTaxiingToGate);
     socket.on('plane:gate_assigned', onPlaneGateAssigned);
-    socket.on('plane:departing', onPlaneDeparting);
+    socket.on('plane:taxiing_to_runway', onPlaneTaxiingToRunway);
     socket.on('plane:departed', onPlaneDeparted);
     socket.on('runway:busy', onRunwayBusy);
     socket.on('runway:free', onRunwayFree);
@@ -145,9 +150,9 @@ export function AirportProvider({ children }) {
       socket.off('status:update', onStatusUpdate);
       socket.off('plane:queued', onPlaneQueued);
       socket.off('plane:landing', onPlaneLanding);
-      socket.off('plane:landed', onPlaneLanded);
+      socket.off('plane:taxiing_to_gate', onPlaneTaxiingToGate);
       socket.off('plane:gate_assigned', onPlaneGateAssigned);
-      socket.off('plane:departing', onPlaneDeparting);
+      socket.off('plane:taxiing_to_runway', onPlaneTaxiingToRunway);
       socket.off('plane:departed', onPlaneDeparted);
       socket.off('runway:busy', onRunwayBusy);
       socket.off('runway:free', onRunwayFree);
@@ -208,17 +213,23 @@ export function AirportProvider({ children }) {
     setLogs([]);
   }, []);
 
+  const closeDemoOverlay = useCallback(() => {
+    setDemoData(null);
+  }, []);
+
   const value = {
     status,
     logs,
     connected,
     loading,
+    demoData,
     addPlane,
     startSimulation,
     stopSimulation,
     simulateRaceCondition,
     simulateDeadlock,
     clearLogs,
+    closeDemoOverlay,
   };
 
   return (

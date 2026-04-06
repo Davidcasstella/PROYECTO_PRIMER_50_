@@ -1,13 +1,13 @@
 /**
- * SimulationPage
- * 
- * Main page that assembles all components into the simulation interface.
- * Uses a grid layout to organize the dashboard components.
+ * SimulationPage - Aerial Airport View Layout
+ *
+ * Layout (top-to-bottom):
+ *   1. Dashboard (header + controls + stats)
+ *   2. Aerial Airport View (includes concurrency demos)
+ *   3. Logs Panel (bottom)
  */
 import AirportDashboard from '../components/AirportDashboard';
-import RunwayView from '../components/RunwayView';
-import GateView from '../components/GateView';
-import PlaneQueue from '../components/PlaneQueue';
+import AirportAerialView from '../components/AirportAerialView';
 import LogsPanel from '../components/LogsPanel';
 import './SimulationPage.css';
 
@@ -18,21 +18,13 @@ export default function SimulationPage() {
         {/* Dashboard header and controls */}
         <AirportDashboard />
 
-        {/* Main content grid */}
-        <div className="simulation-grid">
-          {/* Left column: Runways + Gates */}
-          <div className="simulation-left">
-            <RunwayView />
-            <GateView />
-          </div>
+        {/* Aerial airport visualization */}
+        <AirportAerialView />
 
-          {/* Right column: Queue + Logs */}
-          <div className="simulation-right">
-            <PlaneQueue />
-            <LogsPanel />
-          </div>
-        </div>
+        {/* Event logs */}
+        <LogsPanel />
       </div>
     </div>
   );
 }
+

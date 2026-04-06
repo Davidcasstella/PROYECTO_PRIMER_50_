@@ -9,11 +9,18 @@
  * 4. RACE CONDITIONS: Demonstrates what happens without proper synchronization
  * 5. DEADLOCKS: Demonstrates circular wait and implements prevention strategies
  * 
+ * COMPOUND SYNCHRONIZATION:
+ *   A plane can ONLY land if BOTH a gate AND a runway are available.
+ *   Resource acquisition order (deadlock prevention via global ordering):
+ *     1. Gate semaphore (counting) — acquired FIRST
+ *     2. Runway mutex (binary)     — acquired SECOND
+ *   This order is consistent for BOTH landing and takeoff, preventing circular wait.
+ * 
  * The manager ensures:
  * - Only ONE plane uses a runway at a time (mutual exclusion via binary semaphore)
  * - At most N planes occupy gates simultaneously (counting semaphore with N = numGates)
- * - Planes follow the correct lifecycle: queue -> land -> gate -> depart
- * - Deadlocks are prevented via global resource ordering (always acquire runway BEFORE gate)
+ * - Planes follow the correct lifecycle with BLOCKED states when waiting on semaphores
+ * - Deadlocks are prevented via global resource ordering (always acquire gate BEFORE runway)
  */
 const { Semaphore } = require('./Semaphore');
 const { Plane, PlaneStatus } = require('./Plane');
@@ -44,6 +51,19 @@ class AirportManager {
      * When all gates are occupied, new planes must wait until one is freed.
      */
     this.gateSemaphore = new Semaphore(config.airport.numGates, 'Gate-CountingSemaphore');
+
+    /**
+     * RUNWAY POOL SEMAPHORE (counting)
+     * Tracks total available runways. Used by _acquireAnyRunway() to block
+     * a plane when ALL runways are busy, without binding to a specific runway.
+     * This prevents starvation: a plane waits for "any runway" instead of
+     * being locked to one that might stay busy while another frees up.
+     * 
+     * Initialized to 0 because _acquireAnyRunway uses tryAccess first
+     * and only waits on this semaphore when all tryAccess calls fail.
+     * The semaphore is signaled (released) whenever a runway is freed.
+     */
+    this.runwayPoolSemaphore = new Semaphore(0, 'Runway-Pool');
 
     // FIFO queue for planes waiting to land (analogous to the OS ready queue)
     this.waitingQueue = [];
@@ -85,76 +105,157 @@ class AirportManager {
     });
     logger.log('INFO', `✈️  ${plane.flightNumber} (${plane.airline}) entered the queue. Queue size: ${this.waitingQueue.length}`);
 
-    // Trigger processing of the queue
-    this._processQueue();
+    // Emit status so the plane appears in the sky zone immediately
+    this._emitStatusUpdate();
+
+    // Schedule queue processing after a short delay
+    // This ensures the plane is visible in the sky before landing attempt
+    setTimeout(() => {
+      this._processQueue();
+    }, 100);
 
     return plane;
   }
 
   /**
-   * Process the waiting queue - tries to land the next plane
+   * Process the waiting queue - tries to land planes
    * 
-   * This is the SCHEDULER of our simulation. It checks:
-   * 1. Is there a plane waiting? (queue not empty)
-   * 2. Is there a runway available? (binary semaphore not locked)
-   * 3. Is there a gate available? (counting semaphore not at 0)
+   * This is the SCHEDULER of our simulation. For each waiting plane it checks
+   * the COMPOUND CONDITION:
+   *   1. Is there a gate available? (counting semaphore not at 0)
+   *   2. Is there a runway available? (at least one binary semaphore not locked)
    * 
-   * IMPORTANT: We use global resource ordering to prevent deadlocks.
-   * The order is always: runway FIRST, then gate.
-   * This prevents circular wait (Coffman condition #4).
+   * If BOTH conditions are met, the plane enters its lifecycle.
+   * 
+   * IMPORTANT: Processes MULTIPLE planes when multiple resources are free,
+   * avoiding a bottleneck where only 1 plane is dispatched per call.
+   * 
+   * Deadlock prevention: Global resource ordering — always Gate FIRST, Runway SECOND.
    */
   async _processQueue() {
     if (this.waitingQueue.length === 0) return;
 
-    // Find an available runway
-    const availableRunway = this.runways.find(r => !r.busy);
-    if (!availableRunway) {
-      logger.log('WARN', `🚫 No runway available. ${this.waitingQueue.length} planes waiting.`);
-      return;
+    // Try to dispatch all eligible planes (not just the first one)
+    const unprocessed = this.waitingQueue.filter(p => !p._processing);
+    
+    for (const plane of unprocessed) {
+      // COMPOUND CHECK: Both resources must be available
+      // This is a peek-only check; the real acquisition happens in _handlePlaneLifecycle
+      if (this.gateSemaphore.isFull) {
+        logger.log('WARN', `🚫 All gates occupied. ${this.waitingQueue.length} planes waiting.`);
+        break; // No point checking more planes — no gates available
+      }
+      if (!this.runways.some(r => !r.busy)) {
+        logger.log('WARN', `🚫 No runway available. ${this.waitingQueue.length} planes waiting.`);
+        break; // No point checking more planes — no runways available
+      }
+
+      // Mark the plane as being processed so _processQueue won't pick it again
+      plane._processing = true;
+
+      // Start the full lifecycle for this plane (fire and forget — runs concurrently)
+      this._handlePlaneLifecycle(plane);
     }
-
-    // Check if any gate will be available (counting semaphore)
-    if (this.gateSemaphore.isFull) {
-      logger.log('WARN', `🚫 All gates occupied. ${this.waitingQueue.length} planes waiting.`);
-      return;
-    }
-
-    // Dequeue the next plane (FIFO - First In, First Out)
-    const plane = this.waitingQueue.shift();
-    if (!plane) return;
-
-    // Start the full landing -> gate -> departure cycle for this plane
-    this._handlePlaneLifecycle(plane, availableRunway);
   }
 
   /**
-   * Complete plane lifecycle: landing -> gate -> departure
+   * Dynamically acquire ANY available runway.
    * 
-   * This method represents the full "thread execution" for a plane.
-   * Each step involves acquiring and releasing shared resources through semaphores.
+   * Instead of binding to a specific runway upfront (which causes starvation),
+   * this method tries each runway's binary semaphore with tryAccess() (non-blocking).
+   * If none are free, it waits on the pool semaphore (blocks until ANY runway frees).
    * 
-   * Resource ordering (deadlock prevention):
-   * 1. Acquire RUNWAY (binary semaphore - P operation)
-   * 2. Land (critical section)
-   * 3. Release RUNWAY (V operation)
-   * 4. Acquire GATE (counting semaphore - P operation)
-   * 5. Stay at gate (critical section)
-   * 6. Acquire RUNWAY again for departure (P operation)
-   * 7. Release GATE (V operation)
-   * 8. Depart (critical section)
-   * 9. Release RUNWAY (V operation)
+   * This eliminates the starvation problem: a plane never waits on a specific busy
+   * runway while another runway sits idle.
+   * 
+   * @param {Plane} plane - The plane requesting runway access
+   * @returns {Promise<Runway>} The acquired runway
+   */
+  async _acquireAnyRunway(plane) {
+    while (true) {
+      // Try each runway without blocking (tryAccess uses tryAcquire on the mutex)
+      for (const runway of this.runways) {
+        if (runway.tryAccess(plane)) {
+          return runway; // Got a runway — return immediately
+        }
+      }
+      // ALL runways busy — wait for ANY runway to become available
+      // The pool semaphore is signaled whenever _releaseRunway() is called
+      await this.runwayPoolSemaphore.acquire();
+      // A runway freed up — loop back and try to grab it
+      // (another plane might grab it first, so we must re-check)
+    }
+  }
+
+  /**
+   * Release a runway and signal the pool semaphore if anyone is waiting.
+   * This ensures _acquireAnyRunway() unblocks when a runway frees up.
+   * 
+   * @param {Runway} runway - The runway to release
+   */
+  _releaseRunway(runway) {
+    runway.releaseAccess();
+    // Signal the pool semaphore so any plane blocked in _acquireAnyRunway unblocks
+    if (this.runwayPoolSemaphore.waitingCount > 0) {
+      this.runwayPoolSemaphore.release();
+    }
+  }
+
+  /**
+   * Complete plane lifecycle with COMPOUND SYNCHRONIZATION:
+   * 
+   *   FLYING → WAITING_FOR_RUNWAY → LANDING → TAXIING_TO_GATE → AT_GATE
+   *          → WAITING_FOR_RUNWAY_DEPARTURE → TAXIING_TO_RUNWAY → TAKING_OFF → DEPARTED
+   * 
+   * COMPOUND SYNCHRONIZATION ensures a plane only lands when BOTH
+   * a gate AND a runway are available. Acquisition order:
+   *   1. Gate semaphore (counting) — guarantees a parking spot exists
+   *   2. Runway mutex (binary)     — grants exclusive runway access
+   * 
+   * This order prevents deadlocks (no circular wait possible).
+   * 
+   * Resource lifecycle with try/finally ensures no resource leaks:
+   *   - gateSemaphore is always released (even on error)
+   *   - runway mutex is always released (even on error)
    * 
    * @param {Plane} plane
-   * @param {Runway} runway
    */
-  async _handlePlaneLifecycle(plane, runway) {
+  async _handlePlaneLifecycle(plane) {
+    let acquiredGate = false; // Track if gate semaphore was acquired (for cleanup)
+
     try {
-      // ===== PHASE 1: LANDING (requires runway - binary semaphore) =====
-      
-      // Acquire runway mutex (P operation on binary semaphore)
+      // ===== PHASE 0: FLYING (visible in sky) =====
+      // The plane stays in waitingQueue during this delay so it remains
+      // visible in the sky zone. It is only removed right before landing.
+      await this._delay(config.timing.flyingMin, config.timing.flyingMax);
+
+      // ===== COMPOUND SYNCHRONIZATION =====
+      // Step 1: Set BLOCKED state — plane is waiting for resources
+      plane.setStatus(PlaneStatus.WAITING_FOR_RUNWAY);
+      this._emitStatusUpdate();
+
+      // Step 2: Acquire GATE semaphore FIRST (P operation on counting semaphore)
+      // This GUARANTEES a gate will be available after landing.
+      // Without this, a plane could land and have nowhere to park.
+      await this.gateSemaphore.acquire();
+      acquiredGate = true;
+
+      logger.log('INFO', `🔒 ${plane.flightNumber} acquired gate slot [Gate Semaphore: ${this.gateSemaphore.currentCount}/${this.gateSemaphore.capacity}]`);
+
+      // Step 3: Acquire ANY available runway (dynamic selection)
+      // Uses pool semaphore to avoid binding to a specific busy runway
+      const runway = await this._acquireAnyRunway(plane);
+
+      // ===== NOW both resources are secured =====
+      // Remove the plane from the waiting queue — it's about to land
+      const idx = this.waitingQueue.indexOf(plane);
+      // Store queue position so frontend can animate descent from correct sky position
+      plane.lastQueueIndex = idx !== -1 ? idx : 0;
+      if (idx !== -1) this.waitingQueue.splice(idx, 1);
+
+      // ===== PHASE 1: LANDING (runway critical section) =====
       plane.setStatus(PlaneStatus.LANDING);
       plane.assignedRunway = runway.id;
-      await runway.requestAccess(plane);
 
       eventEmitter.emit('plane:landing', {
         plane: plane.toJSON(),
@@ -163,89 +264,143 @@ class AirportManager {
       eventEmitter.emit('runway:busy', { runway: runway.getStatus() });
       logger.log('INFO', `🛬 ${plane.flightNumber} LANDING on ${runway.name} [Runway LOCKED - Binary Semaphore]`);
 
+      // Emit status so frontend shows landing animation
+      this._emitStatusUpdate();
+
       // Simulate landing time (critical section - plane has exclusive runway access)
       await this._delay(config.timing.landingMin, config.timing.landingMax);
 
-      // Landing complete
-      plane.setStatus(PlaneStatus.LANDED);
+      // Landing complete — release runway (V operation on binary semaphore)
+      this._releaseRunway(runway);
 
-      // Release runway (V operation on binary semaphore)
-      runway.releaseAccess();
-      plane.assignedRunway = null;
-
-      eventEmitter.emit('plane:landed', { plane: plane.toJSON() });
       eventEmitter.emit('runway:free', { runway: runway.getStatus() });
       logger.log('INFO', `✅ ${plane.flightNumber} LANDED. ${runway.name} FREE [Runway UNLOCKED]`);
 
       // Try to process next plane in queue now that runway is free
       this._processQueue();
 
-      // ===== PHASE 2: GATE ASSIGNMENT (requires gate - counting semaphore) =====
-      
-      // Acquire gate slot (P operation on counting semaphore)
-      await this.gateSemaphore.acquire();
-
-      // Find and assign a free gate
+      // ===== PHASE 2: GATE ASSIGNMENT =====
+      // Gate semaphore already acquired above (compound synchronization).
+      // Now find and assign a physical gate.
       const gate = this.gates.find(g => g.isAvailable());
-      if (gate) {
-        gate.assign(plane);
-        plane.setStatus(PlaneStatus.AT_GATE);
-        plane.assignedGate = gate.id;
-
-        eventEmitter.emit('plane:gate_assigned', {
-          plane: plane.toJSON(),
-          gate: gate.getStatus(),
-        });
-        logger.log('INFO', `🚪 ${plane.flightNumber} assigned to ${gate.name} [Gate Semaphore count: ${this.gateSemaphore.currentCount}/${this.gateSemaphore.capacity}]`);
-
-        // Simulate time at gate (passengers boarding/deplaning)
-        await this._delay(config.timing.gateMin, config.timing.gateMax);
-
-        // ===== PHASE 3: DEPARTURE (requires runway again) =====
-        
-        // Find available runway for departure
-        const departRunway = this.runways.find(r => !r.busy) || this.runways[0];
-
-        plane.setStatus(PlaneStatus.DEPARTING);
-        plane.assignedRunway = departRunway.id;
-
-        // Acquire runway for departure (P operation on binary semaphore)
-        await departRunway.requestAccess(plane);
-
-        // Release gate AFTER acquiring runway (ordered release)
-        gate.release();
-        plane.assignedGate = null;
-        this.gateSemaphore.release(); // V operation on counting semaphore
-
-        eventEmitter.emit('gate:free', { gate: gate.getStatus() });
-        eventEmitter.emit('runway:busy', { runway: departRunway.getStatus() });
-        logger.log('INFO', `🛫 ${plane.flightNumber} DEPARTING on ${departRunway.name} [Runway LOCKED]`);
-
-        // Simulate departure time
-        await this._delay(config.timing.departureMin, config.timing.departureMax);
-
-        // Departure complete
-        plane.setStatus(PlaneStatus.DEPARTED);
-        departRunway.releaseAccess();
-        plane.assignedRunway = null;
-
-        eventEmitter.emit('plane:departed', { plane: plane.toJSON() });
-        eventEmitter.emit('runway:free', { runway: departRunway.getStatus() });
-        logger.log('INFO', `✈️  ${plane.flightNumber} DEPARTED! ${departRunway.name} FREE [Runway UNLOCKED]`);
-
-        // Move to completed
-        this.activePlanes.delete(plane.id);
-        this.completedPlanes.push(plane);
-        this.stats.totalPlanesProcessed++;
-
-        // Emit full status update
-        this._emitStatusUpdate();
-
-        // Process next plane in queue
-        this._processQueue();
+      if (!gate) {
+        // Safety: semaphore said a slot exists but no physical gate is free.
+        // This should never happen if gate logic is correct, but protects against leaks.
+        logger.log('ERROR', `❌ ${plane.flightNumber} gate semaphore acquired but no physical gate free! Releasing semaphore.`);
+        this.gateSemaphore.release();
+        acquiredGate = false;
+        return;
       }
+
+      gate.assign(plane);
+      plane.assignedGate = gate.id;
+
+      // ===== PHASE 2a: TAXIING TO GATE =====
+      plane.setStatus(PlaneStatus.TAXIING_TO_GATE);
+
+      eventEmitter.emit('plane:taxiing_to_gate', {
+        plane: plane.toJSON(),
+        gate: gate.getStatus(),
+      });
+      logger.log('INFO', `🚕 ${plane.flightNumber} TAXIING to ${gate.name} [Gate Semaphore count: ${this.gateSemaphore.currentCount}/${this.gateSemaphore.capacity}]`);
+
+      // Emit status so frontend starts taxi-in animation
+      this._emitStatusUpdate();
+
+      // Wait for taxi animation to complete
+      await this._delay(config.timing.taxiToGateMin, config.timing.taxiToGateMax);
+
+      // ===== PHASE 2b: AT GATE =====
+      plane.setStatus(PlaneStatus.AT_GATE);
+
+      eventEmitter.emit('plane:gate_assigned', {
+        plane: plane.toJSON(),
+        gate: gate.getStatus(),
+      });
+      logger.log('INFO', `🚪 ${plane.flightNumber} AT ${gate.name} — Passengers boarding`);
+
+      // Emit status so frontend shows idle state at gate
+      this._emitStatusUpdate();
+
+      // Simulate time at gate (passengers boarding/deplaning)
+      await this._delay(config.timing.gateMin, config.timing.gateMax);
+
+      // ===== PHASE 3: DEPARTURE PREPARATION =====
+      // Set BLOCKED state — plane is waiting for a runway to depart
+      plane.setStatus(PlaneStatus.WAITING_FOR_RUNWAY_DEPARTURE);
+      this._emitStatusUpdate();
+
+      logger.log('INFO', `⏳ ${plane.flightNumber} waiting for departure runway [BLOCKED]`);
+
+      // Acquire ANY available runway for departure (dynamic selection)
+      const departRunway = await this._acquireAnyRunway(plane);
+
+      // ===== PHASE 3a: TAXIING TO RUNWAY =====
+      // Set taxi status so the gate component triggers the tg-taxi-out CSS animation.
+      // The gate is NOT released yet — it keeps rendering the plane during the animation.
+      plane.setStatus(PlaneStatus.TAXIING_TO_RUNWAY);
+      plane.assignedRunway = departRunway.id;
+
+      eventEmitter.emit('plane:taxiing_to_runway', {
+        plane: plane.toJSON(),
+        runway: departRunway.getStatus(),
+      });
+      logger.log('INFO', `🚕 ${plane.flightNumber} TAXIING to ${departRunway.name} for departure`);
+
+      // Emit status so frontend starts taxi-out animation from the gate
+      this._emitStatusUpdate();
+
+      // Wait for taxi-out animation to complete (plane visually moves from gate to runway)
+      await this._delay(config.timing.taxiToRunwayMin, config.timing.taxiToRunwayMax);
+
+      // NOW release gate — the taxi-out animation is complete, plane has visually left
+      gate.release();
+      plane.assignedGate = null;
+      this.gateSemaphore.release(); // V operation on counting semaphore
+      acquiredGate = false; // Gate released successfully
+
+      eventEmitter.emit('gate:free', { gate: gate.getStatus() });
+      logger.log('INFO', `🔓 ${plane.flightNumber} released ${gate.name} [Gate Semaphore: ${this.gateSemaphore.currentCount}/${this.gateSemaphore.capacity}]`);
+
+      // ===== PHASE 4: TAKEOFF (runway already acquired) =====
+      plane.setStatus(PlaneStatus.TAKING_OFF);
+
+      eventEmitter.emit('runway:busy', { runway: departRunway.getStatus() });
+      logger.log('INFO', `🛫 ${plane.flightNumber} TAKING OFF on ${departRunway.name} [Runway LOCKED]`);
+
+      // Emit status so frontend shows takeoff animation
+      this._emitStatusUpdate();
+
+      // Simulate departure time
+      await this._delay(config.timing.departureMin, config.timing.departureMax);
+
+      // Departure complete — release runway
+      plane.setStatus(PlaneStatus.DEPARTED);
+      this._releaseRunway(departRunway);
+      plane.assignedRunway = null;
+
+      eventEmitter.emit('plane:departed', { plane: plane.toJSON() });
+      eventEmitter.emit('runway:free', { runway: departRunway.getStatus() });
+      logger.log('INFO', `✈️  ${plane.flightNumber} DEPARTED! ${departRunway.name} FREE [Runway UNLOCKED]`);
+
+      // Move to completed
+      this.activePlanes.delete(plane.id);
+      this.completedPlanes.push(plane);
+      this.stats.totalPlanesProcessed++;
+
+      // Emit full status update
+      this._emitStatusUpdate();
+
+      // Process next planes in queue
+      this._processQueue();
+
     } catch (error) {
       logger.log('ERROR', `❌ Error processing ${plane.flightNumber}: ${error.message}`);
+      // Resource cleanup: release gate semaphore if it was acquired but not released
+      if (acquiredGate) {
+        this.gateSemaphore.release();
+        logger.log('WARN', `🔓 Released gate semaphore for ${plane.flightNumber} due to error`);
+      }
     }
   }
 
@@ -348,7 +503,7 @@ class AirportManager {
    * 4. Circular Wait ✓ (A -> B -> A cycle)
    * 
    * The SOLUTION implemented: Global resource ordering
-   * Always acquire resources in the same order (runway before gate)
+   * Always acquire resources in the same order (gate before runway)
    * This breaks condition #4 (circular wait), preventing deadlock.
    */
   async simulateDeadlock() {
@@ -382,7 +537,7 @@ class AirportManager {
     // ===== DEADLOCK RESOLUTION =====
     logger.log('INFO', '🔧 === APPLYING DEADLOCK PREVENTION ===');
     logger.log('INFO', '🔧 Strategy: Global Resource Ordering');
-    logger.log('INFO', '🔧 Rule: ALWAYS acquire Runway BEFORE Gate');
+    logger.log('INFO', '🔧 Rule: ALWAYS acquire Gate BEFORE Runway');
     logger.log('INFO', '🔧 This breaks the circular wait condition (Coffman #4)');
 
     await this._delay(2000, 2000);
@@ -400,7 +555,7 @@ class AirportManager {
       planeB: planeB.toJSON(),
       detected: true,
       resolved: true,
-      prevention: 'Global Resource Ordering: Always acquire Runway before Gate. This prevents circular wait.',
+      prevention: 'Global Resource Ordering: Always acquire Gate before Runway. This prevents circular wait.',
       coffmanConditions: [
         'Mutual Exclusion: Resources cannot be shared',
         'Hold and Wait: Process holds resource while waiting for another',
@@ -409,7 +564,7 @@ class AirportManager {
       ],
       solution: [
         'Break Circular Wait by enforcing global resource ordering',
-        'Always acquire Runway FIRST, then Gate',
+        'Always acquire Gate FIRST, then Runway',
         'This makes circular dependency impossible',
       ],
     };

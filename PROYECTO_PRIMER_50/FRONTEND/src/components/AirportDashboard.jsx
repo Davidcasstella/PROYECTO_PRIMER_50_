@@ -41,6 +41,33 @@ export default function AirportDashboard() {
         </div>
       </header>
 
+      {/* Statistics */}
+      <div className="dashboard-stats">
+        <div className="stat-card glass-card">
+          <div className="stat-icon">
+            <PlaneIcon size={20} color="var(--accent-cyan)" />
+          </div>
+          <div className="stat-value">{stats.totalPlanesProcessed}</div>
+          <div className="stat-label">{"Aviones Procesados"}</div>
+        </div>
+        <div className="stat-card glass-card">
+          <div className="stat-value">{status.waitingQueue?.length || 0}</div>
+          <div className="stat-label">{"En Cola"}</div>
+        </div>
+        <div className="stat-card glass-card">
+          <div className="stat-value stat-warn">{stats.raceConditionsDetected}</div>
+          <div className="stat-label">{"Race Conditions"}</div>
+        </div>
+        <div className="stat-card glass-card">
+          <div className="stat-value stat-error">{stats.deadlocksDetected}</div>
+          <div className="stat-label">{"Deadlocks"}</div>
+        </div>
+        <div className="stat-card glass-card">
+          <div className="stat-value stat-success">{stats.deadlocksResolved}</div>
+          <div className="stat-label">{"Resueltos"}</div>
+        </div>
+      </div>
+
       {/* Controls */}
       <div className="dashboard-controls glass-card">
         <div className="controls-group">
@@ -98,33 +125,6 @@ export default function AirportDashboard() {
               <span>{"Deadlock"}</span>
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* Statistics */}
-      <div className="dashboard-stats">
-        <div className="stat-card glass-card">
-          <div className="stat-icon">
-            <PlaneIcon size={20} color="var(--accent-cyan)" />
-          </div>
-          <div className="stat-value">{stats.totalPlanesProcessed}</div>
-          <div className="stat-label">{"Aviones Procesados"}</div>
-        </div>
-        <div className="stat-card glass-card">
-          <div className="stat-value">{status.waitingQueue?.length || 0}</div>
-          <div className="stat-label">{"En Cola"}</div>
-        </div>
-        <div className="stat-card glass-card">
-          <div className="stat-value stat-warn">{stats.raceConditionsDetected}</div>
-          <div className="stat-label">{"Race Conditions"}</div>
-        </div>
-        <div className="stat-card glass-card">
-          <div className="stat-value stat-error">{stats.deadlocksDetected}</div>
-          <div className="stat-label">{"Deadlocks"}</div>
-        </div>
-        <div className="stat-card glass-card">
-          <div className="stat-value stat-success">{stats.deadlocksResolved}</div>
-          <div className="stat-label">{"Resueltos"}</div>
         </div>
       </div>
     </div>

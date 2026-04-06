@@ -1,0 +1,510 @@
+/* ═══════════════════════════════════════════════
+   CONCURRENCY DEMO — IN-PLACE ON AIRPORT VIEW
+   Animated demos right on the actual runways/gates
+   ═══════════════════════════════════════════════ */
+
+/* ── Semi-transparent overlay scoped to aerial-view ── */
+.demo-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-md);
+  animation: demoFadeIn 0.4s ease;
+  pointer-events: none;
+}
+
+.demo-backdrop.demo-closing {
+  animation: demoFadeOut 0.5s ease forwards;
+}
+
+@keyframes demoFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes demoFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ── Floating info banner ── */
+.demo-info-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 600;
+  width: 92%;
+  max-width: 640px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 14px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+  padding: 14px 20px;
+  animation: bannerSlideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+.demo-info-banner.demo-closing {
+  animation: bannerSlideUp 0.5s ease forwards;
+}
+
+@keyframes bannerSlideDown {
+  from { transform: translateX(-50%) translateY(-30px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+@keyframes bannerSlideUp {
+  from { transform: translateX(-50%) translateY(0); opacity: 1; }
+  to   { transform: translateX(-50%) translateY(-30px); opacity: 0; }
+}
+
+/* Banner layout */
+.demo-banner-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.demo-type-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 16px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.demo-badge-race {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: #fff;
+}
+
+.demo-badge-deadlock {
+  background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+  color: #fff;
+}
+
+/* Step dots in banner */
+.demo-steps {
+  display: flex;
+  gap: 5px;
+  flex: 1;
+}
+
+.demo-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ddd;
+  transition: all 0.3s ease;
+}
+
+.demo-step-dot.dot-active {
+  background: #1565c0;
+  transform: scale(1.3);
+  box-shadow: 0 0 6px rgba(21, 101, 192, 0.4);
+}
+
+.demo-step-dot.dot-done {
+  background: #4caf50;
+}
+
+/* Close btn */
+.demo-close-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.demo-close-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: #333;
+}
+
+/* Banner text */
+.demo-banner-body {
+  animation: fadeSlideIn 0.35s ease;
+}
+
+.demo-step-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 3px;
+}
+
+.demo-step-text {
+  font-size: 0.78rem;
+  color: #555;
+  margin: 0;
+  line-height: 1.4;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Solution mini-card inside banner */
+.demo-solution {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(46, 125, 50, 0.06));
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 8px;
+}
+
+.demo-solution-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2e7d32;
+  margin: 0 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.demo-solution-text {
+  font-size: 0.72rem;
+  color: #555;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Navigation arrows */
+.demo-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.demo-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.03);
+  color: #444;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.demo-nav-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+  color: #111;
+}
+
+.demo-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.demo-nav-next {
+  background: linear-gradient(135deg, #1565c0, #1976d2);
+  color: #fff;
+  border-color: transparent;
+}
+
+.demo-nav-next:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0d47a1, #1565c0);
+  color: #fff;
+}
+
+.demo-nav-finish {
+  background: linear-gradient(135deg, #2e7d32, #43a047);
+  color: #fff;
+  border-color: transparent;
+}
+
+.demo-nav-finish:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1b5e20, #2e7d32);
+  color: #fff;
+}
+
+.demo-nav-counter {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #888;
+  letter-spacing: 0.5px;
+}
+
+/* ═══════════════════════════════════════
+   DEMO PLANES — Overlaid on real runways
+   ═══════════════════════════════════════ */
+.demo-plane-overlay {
+  position: absolute;
+  z-index: 510;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  transition: all 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.demo-plane-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 8px;
+  color: #fff;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.demo-plane-tag-a { background: #1565c0; }
+.demo-plane-tag-b { background: #c62828; }
+
+/* ── Race Condition positions ── */
+
+/* Start: planes at left and right edges of runway */
+.demo-rc-a-start {
+  left: 12%;
+  top: 0;
+  transform: translateY(-100%);
+  opacity: 1;
+}
+
+.demo-rc-b-start {
+  right: 12%;
+  top: 0;
+  transform: translateY(-100%);
+  opacity: 1;
+}
+
+/* Move: both approach center */
+.demo-rc-a-move {
+  left: 35%;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 1;
+}
+
+.demo-rc-b-move {
+  right: 35%;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 1;
+}
+
+/* Conflict: overlap at center */
+.demo-rc-a-conflict {
+  left: 43%;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 1;
+}
+
+.demo-rc-b-conflict {
+  right: 43%;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 1;
+}
+
+/* Winner: center */
+.demo-rc-winner {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 1;
+}
+
+/* Loser: fades */
+.demo-rc-loser {
+  opacity: 0.15;
+  transform: translateY(30px) scale(0.6);
+  filter: grayscale(1);
+}
+
+/* Solution: lock appears, winner centered */
+.demo-rc-lock {
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  transform: translateX(-50%);
+  font-size: 1.2rem;
+  z-index: 520;
+  opacity: 0;
+  transition: all 0.4s ease;
+  pointer-events: none;
+}
+
+.demo-rc-lock.lock-visible {
+  opacity: 1;
+  animation: lockBounce 0.5s ease;
+}
+
+@keyframes lockBounce {
+  0%   { transform: translateX(-50%) scale(0); }
+  50%  { transform: translateX(-50%) scale(1.3); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* Conflict flash on runway */
+.demo-rw-conflict {
+  animation: rwConflictFlash 0.5s ease-in-out 3 !important;
+}
+
+@keyframes rwConflictFlash {
+  0%, 100% { box-shadow: none; }
+  50%      { box-shadow: 0 0 20px 4px rgba(198, 40, 40, 0.4); }
+}
+
+/* ═══════════════════════════════════════
+   DEADLOCK — Planes on runway + gate
+   ═══════════════════════════════════════ */
+
+/* Plane A stuck on runway */
+.demo-dl-runway-plane {
+  left: 30%;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 1;
+}
+
+/* Plane B stuck on gate (positioned relative to terminal area) */
+.demo-dl-gate-plane {
+  left: 65%;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 1;
+}
+
+/* Wait arrows between runway and terminal zone */
+.demo-dl-arrows {
+  position: absolute;
+  z-index: 520;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.demo-dl-arrows.arrows-visible {
+  opacity: 1;
+}
+
+.demo-dl-arrow {
+  position: absolute;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: arrowPulse 1.5s ease-in-out infinite;
+}
+
+.demo-dl-arrow-down {
+  left: 25%;
+  top: 50%;
+  color: #1565c0;
+  transform: rotate(15deg);
+}
+
+.demo-dl-arrow-up {
+  right: 25%;
+  top: 50%;
+  color: #c62828;
+  transform: rotate(-15deg);
+}
+
+@keyframes arrowPulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+
+/* Coffman conditions overlay */
+.demo-coffman-overlay {
+  position: absolute;
+  z-index: 530;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.coffman-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(244, 67, 54, 0.12);
+  border: 1px solid rgba(244, 67, 54, 0.2);
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #c62828;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: all 0.4s ease;
+}
+
+.coffman-chip.chip-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.coffman-chip-check {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f44336;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5rem;
+  font-weight: 800;
+}
+
+/* Shake for locked resources */
+.demo-rw-locked {
+  animation: resourceShake 0.5s ease !important;
+}
+
+@keyframes resourceShake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-3px); }
+  40%      { transform: translateX(3px); }
+  60%      { transform: translateX(-2px); }
+  80%      { transform: translateX(1px); }
+}
+
+/* Resolved glow */
+.demo-rw-resolved {
+  box-shadow: 0 0 15px 3px rgba(76, 175, 80, 0.3) !important;
+  transition: box-shadow 0.5s ease;
+}

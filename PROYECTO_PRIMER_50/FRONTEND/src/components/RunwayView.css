@@ -166,20 +166,27 @@
   margin-top: 2px;
 }
 
-/* Landing animation: plane comes from left and stops in center */
+/* Landing animation: plane descends from top-right, always visible */
 .anim-landing {
-  animation: planeLand 2s ease-out forwards;
+  animation: planeLand 3s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
 }
 
 @keyframes planeLand {
   0% {
-    left: -50px;
-    opacity: 0;
-    transform: translateY(-60%) scale(0.6);
-  }
-  30% {
+    /* Visible from the start — far away in upper-right sky */
+    left: 90%;
     opacity: 1;
-    transform: translateY(-55%) scale(0.8);
+    transform: translateY(-160%) scale(0.35);
+  }
+  40% {
+    left: 72%;
+    opacity: 1;
+    transform: translateY(-110%) scale(0.65);
+  }
+  75% {
+    left: 58%;
+    opacity: 1;
+    transform: translateY(-70%) scale(0.85);
   }
   100% {
     left: calc(50% - 20px);
@@ -188,9 +195,9 @@
   }
 }
 
-/* Takeoff animation: plane accelerates and exits right */
+/* Takeoff animation: plane accelerates and exits right, visible until the end */
 .anim-takeoff {
-  animation: planeTakeoff 2s ease-in forwards;
+  animation: planeTakeoff 3s cubic-bezier(0.33, 0, 0.66, 0) forwards;
 }
 
 @keyframes planeTakeoff {
@@ -199,14 +206,20 @@
     opacity: 1;
     transform: translateY(-50%) scale(1);
   }
-  50% {
+  40% {
+    left: 65%;
     opacity: 1;
-    transform: translateY(-50%) scale(1);
+    transform: translateY(-50%) scale(1.05);
+  }
+  75% {
+    left: 80%;
+    opacity: 1;
+    transform: translateY(-100%) scale(0.75);
   }
   100% {
-    left: calc(100% + 50px);
+    left: calc(100% + 30px);
     opacity: 0;
-    transform: translateY(-70%) scale(0.7);
+    transform: translateY(-180%) scale(0.4);
   }
 }
 

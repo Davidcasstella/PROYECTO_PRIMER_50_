@@ -24,7 +24,7 @@ export default function RunwayView() {
       <div className="runway-grid">
         {runways.map((runway) => {
           const planeLanding = runway.busy && runway.currentPlane?.status === 'landing';
-          const planeDeparting = runway.busy && runway.currentPlane?.status === 'departing';
+          const planeDeparting = runway.busy && runway.currentPlane?.status === 'taking_off';
 
           return (
             <div

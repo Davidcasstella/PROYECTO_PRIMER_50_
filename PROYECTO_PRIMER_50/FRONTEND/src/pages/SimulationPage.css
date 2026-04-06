@@ -1,4 +1,4 @@
-/* Simulation Page Layout */
+/* Simulation Page Layout - Vertical stacked */
 .simulation-page {
   min-height: 100vh;
   padding: 0 var(--space-md);
@@ -7,31 +7,10 @@
 .simulation-container {
   max-width: 1400px;
   margin: 0 auto;
-}
-
-.simulation-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: var(--space-lg);
-  padding-bottom: var(--space-2xl);
-}
-
-.simulation-left {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.simulation-right {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-@media (max-width: 1024px) {
-  .simulation-grid {
-    grid-template-columns: 1fr;
-  }
+  gap: var(--space-xs);
+  padding-bottom: 200px;
 }
 
 @media (max-width: 640px) {

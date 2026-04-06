@@ -9,10 +9,14 @@ import './PlaneQueue.css';
 // Status icon map - returns SVG-based indicators instead of emojis
 function StatusIcon({ status }) {
   const iconMap = {
+    flying: { color: 'var(--accent-cyan)', dir: 'right', label: 'Volando' },
+    waiting_for_runway: { color: '#ff9800', dir: 'down', label: 'Esperando Pista' },
     landing: { color: 'var(--accent-red)', dir: 'down', label: 'Aterrizando' },
-    landed: { color: 'var(--accent-green)', dir: 'down', label: 'Aterrizó' },
+    taxiing_to_gate: { color: 'var(--accent-yellow)', dir: 'down', label: 'Taxi → Puerta' },
     at_gate: { color: 'var(--accent-yellow)', dir: 'up', label: 'En puerta' },
-    departing: { color: 'var(--accent-cyan)', dir: 'up', label: 'Despegando' },
+    waiting_for_runway_departure: { color: 'var(--accent-purple)', dir: 'up', label: 'Esperando Pista' },
+    taxiing_to_runway: { color: 'var(--accent-green)', dir: 'up', label: 'Taxi → Pista' },
+    taking_off: { color: 'var(--accent-cyan)', dir: 'up', label: 'Despegando' },
   };
   const cfg = iconMap[status] || { color: 'var(--text-muted)', dir: 'right', label: status };
   return <PlaneIcon size={18} color={cfg.color} direction={cfg.dir} />;
@@ -22,7 +26,7 @@ export default function PlaneQueue() {
   const { status } = useAirport();
   const { waitingQueue = [], activePlanes = [] } = status;
 
-  const inProgress = activePlanes.filter(p => p.status !== 'waiting');
+  const inProgress = activePlanes.filter(p => p.status !== 'flying');
 
   return (
     <div className="plane-queue glass-card" id="plane-queue">
@@ -82,14 +86,19 @@ export default function PlaneQueue() {
                   <div className="qi-airline">{plane.airline}</div>
                 </div>
                 <span className={`badge ${
+                  plane.status === 'waiting_for_runway' ? 'badge-waiting' :
                   plane.status === 'landing' ? 'badge-busy' :
                   plane.status === 'at_gate' ? 'badge-info' :
-                  plane.status === 'departing' ? 'badge-warning' : 'badge-free'
+                  plane.status === 'waiting_for_runway_departure' ? 'badge-waiting' :
+                  plane.status === 'taking_off' ? 'badge-warning' : 'badge-free'
                 }`}>
+                  {plane.status === 'waiting_for_runway' && '⏳ Esperando Pista'}
                   {plane.status === 'landing' && 'Aterrizando'}
-                  {plane.status === 'landed' && 'Aterrizó'}
+                  {plane.status === 'taxiing_to_gate' && 'Taxi → Puerta'}
                   {plane.status === 'at_gate' && `Puerta ${plane.assignedGate}`}
-                  {plane.status === 'departing' && 'Despegando'}
+                  {plane.status === 'waiting_for_runway_departure' && '⏳ Esperando Pista'}
+                  {plane.status === 'taxiing_to_runway' && 'Taxi → Pista'}
+                  {plane.status === 'taking_off' && 'Despegando'}
                 </span>
               </div>
             ))}

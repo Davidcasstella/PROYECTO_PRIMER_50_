@@ -1,0 +1,937 @@
+/* ==============================================
+   AIRPORT AERIAL VIEW — Bird's Eye Visualization
+   GPU-optimized with will-change and contain hints
+   ============================================== */
+
+.aerial-view {
+  padding: var(--space-sm) var(--space-md);
+  animation: fadeInUp 0.5s ease;
+  overflow-x: hidden;
+  overflow-y: visible;
+  contain: layout style;
+}
+
+.aerial-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.aerial-header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.aerial-badges {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+/* ==============================================
+   SKY ZONE — Flying planes (waiting queue)
+   ============================================== */
+.sky-zone {
+  margin-bottom: var(--space-xs);
+}
+
+.sky-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.sky-label-icon {
+  font-size: 1rem;
+  opacity: 0.5;
+}
+
+.sky-area {
+  position: relative;
+  height: 100px;
+  background: linear-gradient(180deg,
+    #87ceeb 0%,
+    #a8d8ea 50%,
+    #cce5f0 100%
+  );
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  contain: layout;
+}
+
+/* Clouds */
+.cloud {
+  position: absolute;
+  width: 80px;
+  height: 24px;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.7) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.cloud-1 {
+  top: 20%;
+  left: 10%;
+  width: 100px;
+  animation: cloudDrift 25s linear infinite;
+}
+
+.cloud-2 {
+  top: 55%;
+  left: 50%;
+  width: 70px;
+  animation: cloudDrift 35s linear infinite reverse;
+}
+
+.cloud-3 {
+  top: 35%;
+  left: 75%;
+  animation: cloudDrift 30s linear infinite;
+  animation-delay: -10s;
+}
+
+@keyframes cloudDrift {
+  from { transform: translateX(-120px); }
+  to   { transform: translateX(calc(100vw + 120px)); }
+}
+
+.sky-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+/* ── Flying planes in the sky — always visible, bright & vivid ── */
+.sky-plane {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  animation: skyFadeIn 0.5s ease forwards;
+}
+
+/* Clockwise orbit — small circle in place */
+.sky-orbit-cw {
+  animation: skyFadeIn 0.5s ease forwards, skyOrbitCW 4s ease-in-out infinite;
+}
+
+/* Counter-clockwise orbit */
+.sky-orbit-ccw {
+  animation: skyFadeIn 0.5s ease forwards, skyOrbitCCW 5s ease-in-out infinite;
+}
+
+@keyframes skyFadeIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes skyOrbitCW {
+  0%   { transform: translate(-50%, -50%) translate(0, 0); }
+  25%  { transform: translate(-50%, -50%) translate(10px, -5px); }
+  50%  { transform: translate(-50%, -50%) translate(0, -8px); }
+  75%  { transform: translate(-50%, -50%) translate(-10px, -3px); }
+  100% { transform: translate(-50%, -50%) translate(0, 0); }
+}
+
+@keyframes skyOrbitCCW {
+  0%   { transform: translate(-50%, -50%) translate(0, 0); }
+  25%  { transform: translate(-50%, -50%) translate(-8px, -6px); }
+  50%  { transform: translate(-50%, -50%) translate(0, -10px); }
+  75%  { transform: translate(-50%, -50%) translate(8px, -3px); }
+  100% { transform: translate(-50%, -50%) translate(0, 0); }
+}
+
+.sky-plane-icon {
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.sky-plane-trail {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 35px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6));
+  border-radius: 1px;
+}
+
+.sky-plane-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  text-shadow: none;
+}
+
+/* ==============================================
+   RUNWAY STRIP — Horizontal runway
+   ============================================== */
+.aerial-runway {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 4px var(--space-sm);
+  position: relative;
+  transition: all var(--transition-normal);
+  z-index: 1;
+}
+
+/* When a runway is busy (plane landing/taking off), raise it above everything
+   so the descent/ascent animation passes OVER the terminal and gates */
+.aerial-runway.rw-busy {
+  z-index: 100;
+}
+
+.aerial-runway::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transition: all var(--transition-normal);
+}
+
+.aerial-runway::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transition: all var(--transition-normal);
+}
+
+.rw-busy::before,
+.rw-busy::after {
+  background: linear-gradient(90deg, transparent, var(--accent-red), transparent);
+  opacity: 0.5;
+}
+
+.rw-free::before,
+.rw-free::after {
+  background: linear-gradient(90deg, transparent, var(--accent-green), transparent);
+  opacity: 0.3;
+}
+
+/* Runway side labels */
+.rw-label-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 75px;
+  flex-shrink: 0;
+}
+
+.rw-label-left {
+  align-items: flex-start;
+}
+
+.rw-label-right {
+  align-items: flex-end;
+}
+
+.rw-number {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.rw-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.rw-flight-id {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.rw-empty {
+  color: var(--text-muted);
+}
+
+.rw-airline {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.rw-stats-mini {
+  display: flex;
+  gap: var(--space-xs);
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* The runway surface itself */
+.rw-strip {
+  flex: 1;
+  height: 50px;
+  background: linear-gradient(180deg,
+    #5a5a5a 0%,
+    #4a4a4a 50%,
+    #5a5a5a 100%
+  );
+  border: 2px solid #6e6e6e;
+  border-radius: 4px;
+  position: relative;
+  overflow: visible; /* Planes can fly in from outside */
+}
+
+/* Center dashes */
+.rw-dashes {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-evenly;
+  padding: 0 20px;
+  pointer-events: none;
+}
+
+.rw-dash {
+  width: 20px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 2px;
+}
+
+/* Edge lights */
+.rw-edge-lights {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-evenly;
+  padding: 0 10px;
+  pointer-events: none;
+}
+
+.rw-edge-top { top: 4px; }
+.rw-edge-bottom { bottom: 4px; }
+
+.rw-light {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  animation: pulse 2s ease infinite;
+}
+
+.light-green {
+  background: #4caf50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+}
+
+.light-red {
+  background: #e53935;
+  box-shadow: 0 0 8px rgba(229, 57, 53, 0.5);
+  animation: pulse-red 1.2s ease infinite;
+}
+
+/* Threshold marks */
+.rw-threshold {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rw-threshold-left { left: 6px; }
+.rw-threshold-right { right: 6px; }
+
+.rw-threshold-mark {
+  width: 10px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 1px;
+}
+
+/* ==============================================
+   RUNWAY PLANE ANIMATIONS
+   ============================================== */
+.rw-plane {
+  position: absolute;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 5;
+  will-change: transform, opacity;
+}
+
+/* Hidden state: runway is empty — element stays in DOM to preserve animation continuity */
+.rw-plane-hidden {
+  opacity: 0;
+  pointer-events: none;
+  left: calc(50% - 22px);
+  transform: translateY(-50%);
+}
+
+.rw-plane-svg {
+  filter: drop-shadow(2px 3px 4px rgba(0, 0, 0, 0.4));
+}
+
+.rw-plane-shadow {
+  width: 32px;
+  height: 6px;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.35) 0%, transparent 70%);
+  border-radius: 50%;
+  margin-top: 1px;
+}
+
+.rw-plane-label {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  margin-top: 1px;
+}
+
+/* Landing: plane descends from the sky zone into the runway.
+   Uses --land-from-y (descent height) and --land-from-x (horizontal sky position).
+   Both are set per-runway/per-plane in JSX.
+   Duration MUST be shorter than backend landingMin (5s). */
+.rw-plane-landing {
+  animation: runwayLand 4.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  z-index: 10;
+}
+
+@keyframes runwayLand {
+  0% {
+    /* Starts at the same horizontal position the plane had in the sky zone */
+    left: var(--land-from-x, 5%);
+    opacity: 0.3;
+    transform: translateY(var(--land-from-y, -180px)) scale(0.5);
+  }
+  20% {
+    /* Descending — shifting toward runway left end */
+    left: var(--land-from-x, 5%);
+    opacity: 0.7;
+    transform: translateY(calc(var(--land-from-y, -180px) * 0.55)) scale(0.75);
+  }
+  40% {
+    /* Final approach — converging to runway touch-down point */
+    left: 10%;
+    opacity: 1;
+    transform: translateY(calc(var(--land-from-y, -180px) * 0.2)) scale(0.95);
+  }
+  55% {
+    /* Touchdown! Wheels on the runway */
+    left: 12%;
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  80% {
+    /* Rolling and braking */
+    left: 30%;
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  100% {
+    /* Full stop at runway center */
+    left: calc(50% - 22px);
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+/* Takeoff: plane accelerates from center and ascends steeply, always visible.
+   Duration MUST be shorter than backend departureMin (5s). */
+.rw-plane-takeoff {
+  animation: runwayTakeoff 4s cubic-bezier(0.33, 0, 0.66, 0) forwards;
+  z-index: 50;
+}
+
+@keyframes runwayTakeoff {
+  0% {
+    /* Begins exactly where the taxi-out dropped it (far left beginning) */
+    left: 10%;
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  40% {
+    /* Accelerating rapidly down the full runway strip before nose-up */
+    left: 65%;
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  75% {
+    /* Nose up, lifting off */
+    left: 80%;
+    opacity: 1;
+    transform: translateY(-120px) scale(1);
+  }
+  100% {
+    /* Gone into the sky — fade out only at the very end */
+    left: 95%;
+    opacity: 0;
+    transform: translateY(-260px) scale(1);
+  }
+}
+
+/* Idle: subtle hover */
+.rw-plane-idle {
+  left: calc(50% - 22px);
+  animation: runwayIdle 3.5s ease-in-out infinite;
+}
+
+@keyframes runwayIdle {
+  0%, 100% { transform: translateY(-50%); }
+  50%      { transform: translateY(-54%); }
+}
+
+/* Ghost plane on empty runway */
+.rw-ghost {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.3;
+}
+
+/* ==============================================
+   TERMINAL ZONE — Gates between runways
+   ============================================== */
+.terminal-zone {
+  margin: 2px 0;
+  padding: var(--space-xs) var(--space-sm);
+  background: rgba(200, 200, 200, 0.4);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-sm);
+  position: relative;
+  z-index: 200;
+  overflow: visible;
+}
+
+.terminal-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.terminal-counter {
+  flex: 1;
+}
+
+.sem-chip {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent-cyan);
+}
+
+.sem-wait {
+  color: var(--accent-yellow);
+}
+
+.terminal-count {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.tc-ok { color: var(--accent-green); }
+.tc-full {
+  color: var(--accent-red);
+  animation: pulse-red 1.5s ease-in-out infinite;
+}
+
+/* Terminal building area */
+.terminal-building {
+  position: relative;
+}
+
+/* Taxiway lines */
+.taxiway {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 var(--space-lg);
+}
+
+.taxiway-line {
+  width: 2px;
+  height: 10px;
+  background: linear-gradient(180deg, rgba(255, 183, 0, 0.6), rgba(255, 183, 0, 0.15));
+  border-radius: 1px;
+  transition: all 0.3s ease;
+}
+
+/* Taxiway lights up when plane is taxiing in */
+.taxiway-active-in {
+  width: 3px;
+  background: linear-gradient(180deg, rgba(2, 119, 189, 0.9), rgba(2, 119, 189, 0.2));
+  box-shadow: 0 0 6px rgba(2, 119, 189, 0.4);
+  animation: taxiwayPulse 0.6s ease infinite;
+}
+
+/* Taxiway lights up when plane is taxiing out */
+.taxiway-active-out {
+  width: 3px;
+  background: linear-gradient(180deg, rgba(46, 125, 50, 0.2), rgba(46, 125, 50, 0.9));
+  box-shadow: 0 0 6px rgba(46, 125, 50, 0.4);
+  animation: taxiwayPulse 0.6s ease infinite;
+}
+
+@keyframes taxiwayPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+.taxiway-bottom .taxiway-line {
+  background: linear-gradient(180deg, rgba(255, 183, 0, 0.15), rgba(255, 183, 0, 0.6));
+}
+
+/* Gate grid */
+.terminal-gates {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-xs);
+  padding: 2px 0;
+}
+
+.terminal-gate {
+  text-align: center;
+  transition: all var(--transition-normal);
+  will-change: transform, opacity;
+}
+
+/* ══════════════════════════════════════════════
+   TAXI-IN ANIMATION: plane slides from runway into gate
+   Duration: 3s — MUST be <= backend taxiToGateMin (3.5s)
+   The plane starts translated to (--taxi-x, -120px) (above, at runway center)
+   and smoothly pans to (0, 0) (its gate position).
+   ══════════════════════════════════════════════ */
+.tg-taxi-in .tg-body {
+  animation: gateBodyIn 2.5s ease forwards;
+}
+
+@keyframes gateBodyIn {
+  0%   { border-color: rgba(0,0,0,0); }
+  100% { border-color: #f57f17; }
+}
+
+.tg-taxi-in .tg-connector {
+  animation: connectorFlashIn 3s ease forwards;
+}
+
+@keyframes connectorFlashIn {
+  0%   { background: rgba(2, 119, 189, 0.8); height: 20px; }
+  50%  { background: rgba(2, 119, 189, 0.4); height: 12px; }
+  100% { background: rgba(0, 0, 0, 0.06); height: 5px; }
+}
+
+.tg-taxi-in .tg-plane-dock {
+  animation: planeDropIn 3s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+@keyframes planeDropIn {
+  0% {
+    opacity: 1;
+    transform: translate(var(--taxi-x, 0px), var(--taxi-y, -120px)) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+/* ══════════════════════════════════════════════
+   TAXI-OUT ANIMATION: plane slides from gate toward runway
+   Duration: 3s — MUST be <= backend taxiToRunwayMin (3.5s)
+   The plane starts at (0, 0) (gate position) and slides to
+   (--taxi-x, 120px) (below, toward the bottom runway).
+   ══════════════════════════════════════════════ */
+.tg-taxi-out .tg-body {
+  animation: gateBodyOut 3s ease forwards;
+}
+
+@keyframes gateBodyOut {
+  0%   { border-color: #f57f17; }
+  100% { border-color: rgba(46, 125, 50, 0.1); }
+}
+
+.tg-taxi-out .tg-connector {
+  animation: connectorFlashOut 3s ease forwards;
+}
+
+@keyframes connectorFlashOut {
+  0%   { background: rgba(0, 0, 0, 0.06); height: 5px; }
+  30%  { background: rgba(46, 125, 50, 0.8); height: 18px; }
+  100% { background: rgba(0, 0, 0, 0.06); height: 5px; }
+}
+
+.tg-taxi-out .tg-plane-dock {
+  animation: planeDropOut 3s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+  z-index: 20;
+  position: relative;
+}
+
+@keyframes planeDropOut {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  20% {
+    /* Pushback operation initially extracts the plane */
+    transform: translate(0, 20px) scale(1);
+  }
+  100% {
+    /* Taxis diagonally and parks at the far-left hold short point */
+    opacity: 1;
+    transform: translate(calc(var(--taxi-x, 0px) - 38vw), var(--taxi-y, 120px)) scale(1);
+  }
+}
+
+.tg-connector {
+  width: 2px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.06);
+  margin: 0 auto 2px;
+  border-radius: 1px;
+}
+
+.tg-body {
+  background: #1a237e;
+  border: 2px solid #283593;
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all var(--transition-normal);
+}
+
+.tg-occupied .tg-body {
+  border-color: #f57f17;
+  background: #1565c0;
+  box-shadow: 0 2px 12px rgba(21, 101, 192, 0.3);
+}
+
+.tg-available .tg-body:hover {
+  border-color: #42a5f5;
+  background: #283593;
+}
+
+.tg-name {
+  font-weight: 600;
+  font-size: 0.68rem;
+  color: #fff;
+}
+
+.tg-plane-dock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-height: 30px;
+  justify-content: center;
+}
+
+.tg-plane-icon {
+  filter: drop-shadow(1px 2px 3px rgba(0, 0, 0, 0.3));
+  animation: gateIdle 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes gateIdle {
+  /* rotate(90deg) keeps the plane facing RIGHT (SVG default = up, +90 = right).
+     CSS @keyframes transform overrides inline style, so we must include
+     the rotation here to avoid the plane flipping back to pointing UP. */
+  0%, 100% { transform: rotate(90deg) translateX(0); }
+  50%      { transform: rotate(90deg) translateX(-3px); }
+}
+
+.tg-flight {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #ffb74d;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.tg-empty-dock {
+  opacity: 0.3;
+}
+
+.tg-empty-text {
+  font-size: 0.58rem;
+  color: rgba(255,255,255,0.5);
+}
+
+/* Terminal utilization bar */
+.terminal-utilization {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+  padding-top: 4px;
+  border-top: 1px solid var(--border-color);
+}
+
+.tu-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.tu-track {
+  flex: 1;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.tu-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-green), var(--accent-yellow), var(--accent-red));
+  border-radius: var(--radius-full);
+  transition: width var(--transition-slow);
+}
+
+.tu-percent {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* ==============================================
+   ACTIVE PLANES TRACKER
+   ============================================== */
+.active-tracker {
+  margin-top: var(--space-xs);
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--border-color);
+}
+
+.at-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.at-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.at-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.at-landing                        { border-color: rgba(198, 40, 40, 0.3); }
+.at-taxiing_to_gate                { border-color: rgba(245, 127, 23, 0.3); }
+.at-at_gate                        { border-color: rgba(245, 127, 23, 0.3); }
+.at-taxiing_to_runway              { border-color: rgba(46, 125, 50, 0.3); }
+.at-taking_off                     { border-color: rgba(2, 119, 189, 0.3); }
+.at-flying                         { border-color: rgba(2, 119, 189, 0.2); }
+.at-waiting_for_runway             { border-color: rgba(255, 152, 0, 0.4); background: rgba(255, 152, 0, 0.08); }
+.at-waiting_for_runway_departure   { border-color: rgba(123, 31, 162, 0.4); background: rgba(123, 31, 162, 0.08); }
+
+/* BLOCKED planes in sky zone — pulsing orange border to indicate waiting on semaphore */
+.sky-plane-blocked {
+  animation: skyOrbitCW 12s linear infinite, blockedPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes blockedPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.4) drop-shadow(0 0 6px rgba(255, 152, 0, 0.6)); }
+}
+
+.at-flight {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.at-status {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+/* ==============================================
+   RESPONSIVE
+   ============================================== */
+@media (max-width: 768px) {
+  .aerial-runway {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .rw-label-side {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: unset;
+  }
+
+  .rw-label-left, .rw-label-right {
+    align-items: center;
+  }
+
+  .rw-strip {
+    height: 50px;
+  }
+
+  .sky-area {
+    height: 120px;
+  }
+
+  .terminal-gates {
+    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+  }
+}

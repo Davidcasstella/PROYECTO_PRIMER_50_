@@ -11,16 +11,22 @@ const config = {
     numGates: parseInt(process.env.NUM_GATES) || 5,
   },
 
-  // Simulation timing (milliseconds)
+  // Simulation timing (milliseconds) - slowed for visible animations
   timing: {
-    landingMin: 3000,
-    landingMax: 5000,
-    gateMin: 5000,
-    gateMax: 10000,
-    departureMin: 3000,
-    departureMax: 5000,
-    spawnMin: 2000,
-    spawnMax: 5000,
+    flyingMin: 1500,          // Minimum time visible in sky before landing
+    flyingMax: 2500,          // Maximum time visible in sky
+    landingMin: 5000,
+    landingMax: 8000,
+    taxiToGateMin: 3500,      // Time for taxi-in animation (must >= CSS animation)
+    taxiToGateMax: 3500,
+    gateMin: 8000,
+    gateMax: 15000,
+    taxiToRunwayMin: 3500,    // Time for taxi-out animation (must >= CSS animation)
+    taxiToRunwayMax: 3500,
+    departureMin: 5000,
+    departureMax: 8000,
+    spawnMin: 4000,
+    spawnMax: 8000,
   },
 
   // Airline names for random plane generation
